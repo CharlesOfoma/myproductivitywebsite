@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Student Weekly Meal Plan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .goals-section {
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .goals-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+        }
+
+        .goals-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .goal-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        .btn-export:hover {
+            box-shadow: 0 10px 20px rgba(86, 171, 47, 0.4);
+        }
+
+        .meal-plan {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .day-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .day-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
+        }
+
+        .day-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .meal-section {
+            margin-bottom: 20px;
+        }
+
+        .meal-title {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #2c3e50;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .meal-content {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .meal-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .meal-item:last-child {
+            border-bottom: none;
+        }
+
+        .meal-name {
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .meal-portion {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .nutrition-summary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .nutrition-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .nutrition-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .nutrition-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .nutrition-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .tips-section {
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .tip-item {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .export-info {
+            background: linear-gradient(135deg, #d299c2 0%, #fef9d7 100%);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                margin: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .meal-plan {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
+        .highlight {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.8; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Medical Student Meal Plan</h1>
+            <p>Optimized for Fat Loss & Muscle Building | Busy Schedule Friendly</p>
+        </div>
+
+        <div class="goals-section">
+            <h3>🎯 Your Fitness Goals</h3>
+            <div class="goals-grid">
+                <div class="goal-item">
+                    <h4>🔥 Fat Loss</h4>
+                    <p>Caloric deficit with high protein</p>
+                </div>
+                <div class="goal-item">
+                    <h4>💪 Muscle Building</h4>
+                    <p>1.6-2.2g protein per kg body weight</p>
+                </div>
+                <div class="goal-item">
+                    <h4>⚡ Quick Prep</h4>
+                    <p>Minimal cooking time required</p>
+                </div>
+                <div class="goal-item">
+                    <h4>🧠 Study Fuel</h4>
+                    <p>Brain-boosting nutrients</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="generateNewPlan()">🔄 Generate New Week</button>
+            <button class="btn btn-export" onclick="exportPlan()">📥 Export Plan</button>
+            <button class="btn" onclick="printPlan()">🖨️ Print Plan</button>
+        </div>
+
+        <div id="mealPlan" class="meal-plan"></div>
+
+        <div class="nutrition-summary">
+            <h3 style="text-align: center; margin-bottom: 15px; color: #2c3e50;">📊 Daily Nutrition Targets</h3>
+            <div class="nutrition-grid">
+                <div class="nutrition-item">
+                    <div class="nutrition-value">1800-2000</div>
+                    <div class="nutrition-label">Calories</div>
+                </div>
+                <div class="nutrition-item">
+                    <div class="nutrition-value">120-140g</div>
+                    <div class="nutrition-label">Protein</div>
+                </div>
+                <div class="nutrition-item">
+                    <div class="nutrition-value">200-250g</div>
+                    <div class="nutrition-label">Carbs</div>
+                </div>
+                <div class="nutrition-item">
+                    <div class="nutrition-value">60-80g</div>
+                    <div class="nutrition-label">Healthy Fats</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tips-section">
+            <h3 style="text-align: center; margin-bottom: 15px; color: #2c3e50;">💡 Medical Student Success Tips</h3>
+            <div class="tips-grid">
+                <div class="tip-item">
+                    <h4>🥘 Meal Prep Sunday</h4>
+                    <p>Cook jollof rice, beans, and boiled eggs in batches. Store in containers for the week.</p>
+                </div>
+                <div class="tip-item">
+                    <h4>💧 Hydration</h4>
+                    <p>Drink 2-3L water daily. Keep a bottle during study sessions.</p>
+                </div>
+                <div class="tip-item">
+                    <h4>⏰ Timing</h4>
+                    <p>Eat protein within 2 hours post-workout. Have suya as your evening protein source.</p>
+                </div>
+                <div class="tip-item">
+                    <h4>🍽️ Portion Control</h4>
+                    <p>Use your palm for protein, cupped hand for carbs, thumb for fats.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="export-info">
+            <h4>📱 Export Features</h4>
+            <p>Export your meal plan as text for easy sharing, printing, or saving to your phone notes!</p>
+        </div>
+    </div>
+
+    <script>
+        const mealOptions = {
+            breakfast: [
+                { name: "Beans + 2 Boiled Eggs", protein: "High", prep: "5 min" },
+                { name: "Oats + Peanut Butter", protein: "Medium", prep: "3 min" },
+                { name: "Beans + White Bread (1 slice)", protein: "High", prep: "5 min" },
+                { name: "Scrambled Eggs (3) + Toast", protein: "High", prep: "10 min" },
+                { name: "Moimoi + Boiled Egg", protein: "High", prep: "2 min" }
+            ],
+            lunch: [
+                { name: "Jollof Rice + Beef", protein: "High", prep: "5 min (if prepped)" },
+                { name: "White Rice + Beef Stew", protein: "High", prep: "10 min" },
+                { name: "Spaghetti + Sausages", protein: "Medium", prep: "15 min" },
+                { name: "Fried Rice + Chicken", protein: "High", prep: "20 min" },
+                { name: "Shawarma (homemade wrap)", protein: "High", prep: "10 min" }
+            ],
+            dinner: [
+                { name: "Suya (Beef/Chicken) + Cabbage Salad", protein: "High", prep: "5 min" },
+                { name: "Grilled Beef + Steamed Cabbage", protein: "High", prep: "15 min" },
+                { name: "Suya + White Rice (small portion)", protein: "High", prep: "5 min" },
+                { name: "Beef Stir-fry + Cabbage", protein: "High", prep: "10 min" },
+                { name: "Suya + Boiled Eggs (2)", protein: "Very High", prep: "5 min" }
+            ],
+            snacks: [
+                { name: "Boiled Eggs (2)", protein: "High", prep: "2 min" },
+                { name: "Peanut Butter (2 tbsp)", protein: "Medium", prep: "1 min" },
+                { name: "Pastry (limit 1/day)", protein: "Low", prep: "0 min" },
+                { name: "PB + Bread", protein: "Medium", prep: "2 min" }
+            ]
+        };
+
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        let currentPlan = {};
+
+        function getRandomMeal(category) {
+            const meals = mealOptions[category];
+            return meals[Math.floor(Math.random() * meals.length)];
+        }
+
+        function generateWeeklyPlan() {
+            const plan = {};
+            days.forEach(day => {
+                plan[day] = {
+                    breakfast: getRandomMeal('breakfast'),
+                    lunch: getRandomMeal('lunch'),
+                    dinner: getRandomMeal('dinner'),
+                    snack: getRandomMeal('snacks')
+                };
+            });
+            return plan;
+        }
+
+        function renderMealPlan(plan) {
+            const container = document.getElementById('mealPlan');
+            container.innerHTML = '';
+
+            days.forEach(day => {
+                const dayCard = document.createElement('div');
+                dayCard.className = 'day-card';
+                
+                dayCard.innerHTML = `
+                    <div class="day-header">${day}</div>
+                    
+                    <div class="meal-section">
+                        <div class="meal-title">🌅 Breakfast</div>
+                        <div class="meal-content">
+                            <div class="meal-item">
+                                <span class="meal-name">${plan[day].breakfast.name}</span>
+                                <span class="meal-portion">${plan[day].breakfast.protein} Protein</span>
+                            </div>
+                            <small style="color: #666;">Prep: ${plan[day].breakfast.prep}</small>
+                        </div>
+                    </div>
+
+                    <div class="meal-section">
+                        <div class="meal-title">🍽️ Lunch</div>
+                        <div class="meal-content">
+                            <div class="meal-item">
+                                <span class="meal-name">${plan[day].lunch.name}</span>
+                                <span class="meal-portion">${plan[day].lunch.protein} Protein</span>
+                            </div>
+                            <small style="color: #666;">Prep: ${plan[day].lunch.prep}</small>
+                        </div>
+                    </div>
+
+                    <div class="meal-section">
+                        <div class="meal-title">🌙 Dinner</div>
+                        <div class="meal-content">
+                            <div class="meal-item">
+                                <span class="meal-name">${plan[day].dinner.name}</span>
+                                <span class="meal-portion">${plan[day].dinner.protein} Protein</span>
+                            </div>
+                            <small style="color: #666;">Prep: ${plan[day].dinner.prep}</small>
+                        </div>
+                    </div>
+
+                    <div class="meal-section">
+                        <div class="meal-title">🥜 Snack</div>
+                        <div class="meal-content">
+                            <div class="meal-item">
+                                <span class="meal-name">${plan[day].snack.name}</span>
+                                <span class="meal-portion">${plan[day].snack.protein} Protein</span>
+                            </div>
+                            <small style="color: #666;">Prep: ${plan[day].snack.prep}</small>
+                        </div>
+                    </div>
+                `;
+
+                container.appendChild(dayCard);
+            });
+        }
+
+        function generateNewPlan() {
+            currentPlan = generateWeeklyPlan();
+            renderMealPlan(currentPlan);
+            
+            // Add highlight animation
+            document.querySelectorAll('.day-card').forEach(card => {
+                card.classList.add('highlight');
+                setTimeout(() => card.classList.remove('highlight'), 2000);
+            });
+        }
+
+        function exportPlan() {
+            let exportText = "🏥 MEDICAL STUDENT WEEKLY MEAL PLAN\n";
+            exportText += "=======================================\n\n";
+            exportText += "🎯 GOALS: Fat Loss + Muscle Building\n";
+            exportText += "📅 Generated: " + new Date().toLocaleDateString() + "\n\n";
+
+            days.forEach(day => {
+                exportText += `📅 ${day.toUpperCase()}\n`;
+                exportText += "─".repeat(20) + "\n";
+                exportText += `🌅 Breakfast: ${currentPlan[day].breakfast.name} (${currentPlan[day].breakfast.prep})\n`;
+                exportText += `🍽️ Lunch: ${currentPlan[day].lunch.name} (${currentPlan[day].lunch.prep})\n`;
+                exportText += `🌙 Dinner: ${currentPlan[day].dinner.name} (${currentPlan[day].dinner.prep})\n`;
+                exportText += `🥜 Snack: ${currentPlan[day].snack.name} (${currentPlan[day].snack.prep})\n\n`;
+            });
+
+            exportText += "💡 QUICK TIPS:\n";
+            exportText += "• Beans only available in mornings\n";
+            exportText += "• Suya only available at night\n";
+            exportText += "• Prep jollof rice & eggs in batches\n";
+            exportText += "• Drink 2-3L water daily\n";
+            exportText += "• Target: 120-140g protein daily\n\n";
+
+            exportText += "📊 DAILY TARGETS:\n";
+            exportText += "• Calories: 1800-2000\n";
+            exportText += "• Protein: 120-140g\n";
+            exportText += "• Carbs: 200-250g\n";
+            exportText += "• Fats: 60-80g\n";
+
+            // Create downloadable file
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `meal-plan-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            alert('📥 Meal plan exported successfully! Check your downloads folder.');
+        }
+
+        function printPlan() {
+            window.print();
+        }
+
+        // Initialize with a plan
+        document.addEventListener('DOMContentLoaded', function() {
+            generateNewPlan();
+        });
+    </script>
+</body>
+</html>

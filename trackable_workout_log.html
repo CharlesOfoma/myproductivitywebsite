@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>4-Day Upper/Lower Trackable Workout Log</title>
+  <style>
+    :root{--bg:#f4f6f8;--card:#fff;--muted:#6b7280;--accent:#2563eb}
+    body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);margin:0;padding:24px}
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+    h1{font-size:20px;margin:0}
+    .controls button{margin-left:8px;padding:8px 12px;border-radius:6px;border:1px solid #ddd;background:white;cursor:pointer}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    @media(min-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    .exercise{display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px dashed #eee}
+    .exercise:last-child{border-bottom:0}
+    .ex-meta{flex:1}
+    .ex-name{font-weight:600}
+    .sets{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+    .set{display:flex;align-items:center;gap:6px}
+    .set input{width:60px;padding:6px;border-radius:6px;border:1px solid #ddd}
+    .small{font-size:12px;color:var(--muted)}
+    .done{background:#d1fae5;border:1px solid #10b981;padding:6px 8px;border-radius:6px;color:#065f46}
+    .actions{display:flex;gap:8px;margin-top:10px}
+    .btn-primary{background:var(--accent);color:white;padding:8px 12px;border-radius:8px;border:none;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid #ddd;padding:8px 12px;border-radius:8px;cursor:pointer}
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>4‑Day Upper/Lower — Trackable Workout Log</h1>
+      <div class="controls">
+        <label class="small">Week:</label>
+        <select id="weekSelect"></select>
+        <button id="prevWeek">◀</button>
+        <button id="nextWeek">▶</button>
+        <button id="exportCSV">Export CSV</button>
+        <button id="clearWeek" class="btn-ghost">Clear</button>
+      </div>
+    </header>
+
+    <main class="grid" id="workouts"></main>
+
+    <footer>
+      Save data is stored in your browser (localStorage). You can export each week's log as CSV. Works offline.
+    </footer>
+  </div>
+
+<script>
+// --- Workout template (from your plan) ---
+const TEMPLATE = {
+  "Day 1 - Upper (Push)": [
+    {name:"Barbell Bench Press", sets:4, reps:"6-8"},
+    {name:"Overhead Barbell Press", sets:4, reps:"8-10"},
+    {name:"Dumbbell Incline Press", sets:3, reps:"8-10"},
+    {name:"Dumbbell Lateral Raise", sets:3, reps:"12-15"},
+    {name:"Close-grip Bench Press", sets:3, reps:"8-10"},
+    {name:"Push-ups", sets:3, reps:"Max"}
+  ],
+  "Day 2 - Lower (Quads)": [
+    {name:"Back Squat", sets:4, reps:"6-8"},
+    {name:"Front/Goblet Squat", sets:3, reps:"8-10"},
+    {name:"Walking Lunges", sets:3, reps:"12 steps/leg"},
+    {name:"Sissy / Leg Ext Alternatives", sets:3, reps:"12-15"},
+    {name:"Standing Calf Raises", sets:4, reps:"15-20"}
+  ],
+  "Day 3 - Upper (Pull)": [
+    {name:"Barbell Row", sets:4, reps:"6-8"},
+    {name:"Pull-ups / Chin-ups", sets:4, reps:"Max"},
+    {name:"One-arm Dumbbell Row", sets:3, reps:"8-10"},
+    {name:"Barbell / DB Curl", sets:3, reps:"10-12"},
+    {name:"Face Pulls (band)", sets:3, reps:"12-15"},
+    {name:"Plank", sets:3, reps:"60s"}
+  ],
+  "Day 4 - Lower (Glutes/Hamstrings)": [
+    {name:"Deadlift", sets:4, reps:"5"},
+    {name:"Romanian Deadlift", sets:3, reps:"8-10"},
+    {name:"Bulgarian Split Squat", sets:3, reps:"8-10/leg"},
+    {name:"Barbell Hip Thrust", sets:4, reps:"10-12"},
+    {name:"Seated/Bar Calf Raise", sets:3, reps:"15-20"}
+  ]
+};
+
+// --- Storage keys & helpers ---
+const STORAGE_PREFIX = 'workoutLog_v1_';
+function weekKey(isoWeek){return STORAGE_PREFIX + isoWeek}
+function isoWeekString(date){ // YYYY-Www (simple Monday-start week)
+  const d = new Date(date.getTime());
+  d.setHours(0,0,0,0);
+  // Thursday in current week decides the year.
+  d.setDate(d.getDate() + 4 - (d.getDay()||7));
+  const yearStart = new Date(d.getFullYear(),0,1);
+  const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+  return d.getFullYear() + '-W' + String(weekNo).padStart(2,'0');
+}
+
+// --- UI building ---
+const workoutsEl = document.getElementById('workouts');
+const weekSelect = document.getElementById('weekSelect');
+const prevWeek = document.getElementById('prevWeek');
+const nextWeek = document.getElementById('nextWeek');
+const exportCSV = document.getElementById('exportCSV');
+const clearWeek = document.getElementById('clearWeek');
+
+let currentWeek = isoWeekString(new Date());
+// populate week selector with +/- 6 weeks
+function populateWeekOptions(center){
+  weekSelect.innerHTML='';
+  const centerDate = new Date();
+  // find monday of center week
+  const day = centerDate.getDay()||7; centerDate.setDate(centerDate.getDate() - day + 1);
+  for(let i=-6;i<=6;i++){
+    const d = new Date(centerDate); d.setDate(d.getDate() + i*7);
+    const id = isoWeekString(d);
+    const opt = document.createElement('option'); opt.value = id; opt.textContent = id;
+    if(id===currentWeek) opt.selected = true;
+    weekSelect.appendChild(opt);
+  }
+}
+
+function loadWeek(key){
+  const json = localStorage.getItem(weekKey(key));
+  return json? JSON.parse(json): null;
+}
+function saveWeek(key,data){
+  localStorage.setItem(weekKey(key), JSON.stringify(data));
+}
+function clearWeekData(key){
+  localStorage.removeItem(weekKey(key));
+}
+
+function buildLogForWeek(weekId){
+  workoutsEl.innerHTML='';
+  const saved = loadWeek(weekId) || {};
+  Object.keys(TEMPLATE).forEach(dayTitle=>{
+    const card = document.createElement('section'); card.className='card';
+    const h = document.createElement('h3'); h.textContent = dayTitle; h.style.margin='0 0 6px 0';
+    const meta = document.createElement('div'); meta.className='small'; meta.textContent = TEMPLATE[dayTitle].length + ' exercises';
+    card.appendChild(h); card.appendChild(meta);
+
+    TEMPLATE[dayTitle].forEach((ex,exIdx)=>{
+      const exWrap = document.createElement('div'); exWrap.className='exercise';
+      const left = document.createElement('div'); left.className='ex-meta';
+      const name = document.createElement('div'); name.className='ex-name'; name.textContent = ex.name;
+      const desc = document.createElement('div'); desc.className='small'; desc.textContent = ex.sets + '× ' + ex.reps;
+      left.appendChild(name); left.appendChild(desc);
+
+      const setsWrap = document.createElement('div'); setsWrap.className='sets';
+      for(let s=1;s<=ex.sets;s++){
+        const setDiv = document.createElement('div'); setDiv.className='set';
+        const inWeight = document.createElement('input'); inWeight.placeholder='kg'; inWeight.dataset.type='weight';
+        const inReps = document.createElement('input'); inReps.placeholder='reps'; inReps.dataset.type='reps';
+        const tick = document.createElement('button'); tick.textContent='✓'; tick.title='Mark set done'; tick.style.padding='6px';
+        // restore saved
+        const savedVal = saved[dayTitle]?.[exIdx]?.[s-1] || {};
+        inWeight.value = savedVal.weight || '';
+        inReps.value = savedVal.reps || '';
+        if(savedVal.done) setDiv.classList.add('done');
+
+        tick.addEventListener('click',()=>{
+          saved[dayTitle] = saved[dayTitle] || [];
+          saved[dayTitle][exIdx] = saved[dayTitle][exIdx] || [];
+          const cur = saved[dayTitle][exIdx][s-1] || {};
+          cur.done = !cur.done;
+          saved[dayTitle][exIdx][s-1] = cur;
+          if(cur.done) setDiv.classList.add('done'); else setDiv.classList.remove('done');
+          saveWeek(weekId,saved);
+        });
+
+        [inWeight,inReps].forEach(inp=>{
+          inp.addEventListener('change',()=>{
+            saved[dayTitle] = saved[dayTitle] || [];
+            saved[dayTitle][exIdx] = saved[dayTitle][exIdx] || [];
+            const cur = saved[dayTitle][exIdx][s-1] || {};
+            cur.weight = inWeight.value; cur.reps = inReps.value;
+            saved[dayTitle][exIdx][s-1] = cur;
+            saveWeek(weekId,saved);
+          });
+        });
+
+        setDiv.appendChild(inWeight); setDiv.appendChild(inReps); setDiv.appendChild(tick);
+        setsWrap.appendChild(setDiv);
+      }
+
+      exWrap.appendChild(left); exWrap.appendChild(setsWrap);
+      card.appendChild(exWrap);
+    });
+
+    const actions = document.createElement('div'); actions.className='actions';
+    const markAll = document.createElement('button'); markAll.textContent='Mark all sets done'; markAll.className='btn-primary';
+    markAll.addEventListener('click',()=>{
+      const savedLocal = loadWeek(weekId) || {};
+      savedLocal[dayTitle] = savedLocal[dayTitle] || [];
+      TEMPLATE[dayTitle].forEach((ex,exIdx)=>{
+        savedLocal[dayTitle][exIdx] = savedLocal[dayTitle][exIdx] || [];
+        for(let s=0;s<ex.sets;s++){
+          savedLocal[dayTitle][exIdx][s] = savedLocal[dayTitle][exIdx][s] || {};
+          savedLocal[dayTitle][exIdx][s].done = true;
+        }
+      });
+      saveWeek(weekId,savedLocal);
+      buildLogForWeek(weekId);
+    });
+
+    const clearDay = document.createElement('button'); clearDay.textContent='Clear day'; clearDay.className='btn-ghost';
+    clearDay.addEventListener('click',()=>{
+      const savedLocal = loadWeek(weekId) || {};
+      delete savedLocal[dayTitle]; saveWeek(weekId,savedLocal); buildLogForWeek(weekId);
+    });
+
+    actions.appendChild(markAll); actions.appendChild(clearDay);
+    card.appendChild(actions);
+    workoutsEl.appendChild(card);
+  });
+}
+
+// --- week controls ---
+populateWeekOptions(); buildLogForWeek(currentWeek);
+weekSelect.addEventListener('change',(e)=>{ currentWeek = e.target.value; buildLogForWeek(currentWeek); });
+prevWeek.addEventListener('click',()=>{
+  const idx = Array.from(weekSelect.options).findIndex(o=>o.value===currentWeek);
+  if(idx>0){ weekSelect.selectedIndex = idx-1; currentWeek = weekSelect.value; buildLogForWeek(currentWeek); }
+});
+nextWeek.addEventListener('click',()=>{
+  const idx = Array.from(weekSelect.options).findIndex(o=>o.value===currentWeek);
+  if(idx<weekSelect.options.length-1){ weekSelect.selectedIndex = idx+1; currentWeek = weekSelect.value; buildLogForWeek(currentWeek); }
+});
+
+clearWeek.addEventListener('click',()=>{ if(confirm('Clear saved data for this week?')){ clearWeekData(currentWeek); buildLogForWeek(currentWeek); }});
+
+// --- Export CSV ---
+function exportWeekCSV(weekId){
+  const saved = loadWeek(weekId) || {};
+  const rows = [['Week',weekId],[]];
+  Object.keys(TEMPLATE).forEach(dayTitle=>{
+    rows.push([dayTitle]);
+    TEMPLATE[dayTitle].forEach((ex,exIdx)=>{
+      const sets = [];
+      for(let s=0;s<ex.sets;s++){
+        const data = saved[dayTitle]?.[exIdx]?.[s] || {};
+        sets.push(`set${s+1}:${data.weight||''}/${data.reps||''}${data.done?'/done':''}`);
+      }
+      rows.push([ex.name, ex.sets + 'x' + ex.reps, sets.join(' | ')]);
+    });
+    rows.push([]);
+  });
+  const csv = rows.map(r=> r.map(c=> '"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `workout_${weekId}.csv`; a.click(); URL.revokeObjectURL(url);
+}
+exportCSV.addEventListener('click', ()=> exportWeekCSV(currentWeek));
+
+</script>
+</body>
+</html>

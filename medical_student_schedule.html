@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Student Weekly Schedule</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 10px 15px;
+            border-radius: 25px;
+            border: 2px solid rgba(102, 126, 234, 0.2);
+        }
+
+        label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        select:focus, input:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 100px repeat(7, 1fr);
+            gap: 2px;
+            background: #f0f0f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-slot, .day-header {
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .day-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 14px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .time-slot {
+            background: #f8f9fa;
+            color: #666;
+            font-size: 12px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .activity-cell {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            min-height: 50px;
+            background: white;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 12px;
+        }
+
+        .activity-cell:hover {
+            background: #f0f7ff;
+            transform: scale(1.02);
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .activity-cell.editable {
+            border: 2px dashed #007bff;
+            background: #f0f7ff;
+        }
+
+        /* Activity type colors */
+        .rotation { background: linear-gradient(135deg, #ff6b6b, #ee5a24); color: white; }
+        .on-call { background: linear-gradient(135deg, #e17055, #d63031); color: white; }
+        .study { background: linear-gradient(135deg, #00b894, #00a085); color: white; }
+        .fitness { background: linear-gradient(135deg, #fdcb6e, #e17055); color: white; }
+        .reading { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; }
+        .social { background: linear-gradient(135deg, #fd79a8, #e84393); color: white; }
+        .leisure { background: linear-gradient(135deg, #00cec9, #55a3ff); color: white; }
+        .buffer { background: linear-gradient(135deg, #ddd, #bbb); color: #666; }
+        .meal { background: linear-gradient(135deg, #fab1a0, #e17055); color: white; }
+        .sleep { background: linear-gradient(135deg, #636e72, #2d3436); color: white; }
+
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .legend-item:hover {
+            transform: scale(1.05);
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .notes {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .notes h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .notes ul {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .notes li {
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .schedule-grid {
+                grid-template-columns: 80px repeat(7, 1fr);
+                font-size: 10px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Medical Student Weekly Schedule</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="callDays">On-call days:</label>
+                <select id="callDays" multiple>
+                    <option value="monday">Monday</option>
+                    <option value="tuesday">Tuesday</option>
+                    <option value="wednesday" selected>Wednesday</option>
+                    <option value="thursday">Thursday</option>
+                    <option value="friday" selected>Friday</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="studyHours">Daily study hours:</label>
+                <input type="number" id="studyHours" min="1" max="8" value="3">
+            </div>
+            
+            <button onclick="generateSchedule()">Update Schedule</button>
+            <button onclick="exportSchedule()">Export as Text</button>
+        </div>
+
+        <div class="schedule-grid" id="scheduleGrid">
+            <!-- Schedule will be generated here -->
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color rotation"></div>
+                <span>Clinical Rotation</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color on-call"></div>
+                <span>On-call Duty</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color study"></div>
+                <span>Study Time</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color fitness"></div>
+                <span>Fitness/Exercise</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color reading"></div>
+                <span>Reading Books</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color social"></div>
+                <span>Social/Loved Ones</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color leisure"></div>
+                <span>Leisure Time</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color buffer"></div>
+                <span>Buffer/Flexible</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color meal"></div>
+                <span>Meals</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color sleep"></div>
+                <span>Sleep</span>
+            </div>
+        </div>
+
+        <div class="notes">
+            <h3>📋 Schedule Notes & Tips:</h3>
+            <ul>
+                <li><strong>Study blocks</strong> are strategically placed when you're most alert and free from rotations</li>
+                <li><strong>Buffer time</strong> is built in for unexpected circumstances and schedule flexibility</li>
+                <li><strong>Weekend mornings</strong> have extended study sessions when you're fresh</li>
+                <li><strong>Exercise</strong> is scheduled consistently to maintain physical and mental health</li>
+                <li><strong>Social time</strong> is protected to maintain relationships and mental well-being</li>
+                <li>Click on any cell to customize activities for your specific needs</li>
+                <li>On-call days have lighter study loads the following morning for recovery</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const timeSlots = [
+            '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
+            '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
+            '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM', '10:00 PM', '11:00 PM'
+        ];
+
+        const days = ['Time', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        let schedule = {};
+
+        function initializeSchedule() {
+            schedule = {};
+            days.slice(1).forEach(day => {
+                schedule[day] = {};
+                timeSlots.forEach(time => {
+                    schedule[day][time] = { activity: '', type: '' };
+                });
+            });
+        }
+
+        function generateSchedule() {
+            initializeSchedule();
+            const callDays = Array.from(document.getElementById('callDays').selectedOptions).map(option => 
+                option.value.charAt(0).toUpperCase() + option.value.slice(1)
+            );
+            const studyHours = parseInt(document.getElementById('studyHours').value);
+
+            // Base schedule for all days
+            days.slice(1).forEach(day => {
+                // Sleep (11 PM - 6 AM)
+                schedule[day]['11:00 PM'] = { activity: 'Sleep', type: 'sleep' };
+                
+                // Morning routine
+                schedule[day]['6:00 AM'] = { activity: 'Wake up / Morning routine', type: 'buffer' };
+                schedule[day]['7:00 AM'] = { activity: 'Breakfast', type: 'meal' };
+
+                if (['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day)) {
+                    // Weekday rotation schedule
+                    schedule[day]['8:00 AM'] = { activity: 'Commute / Prep', type: 'buffer' };
+                    for (let hour = 9; hour <= 15; hour++) {
+                        const timeStr = hour <= 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`;
+                        if (hour === 12) {
+                            schedule[day]['12:00 PM'] = { activity: 'Lunch break', type: 'meal' };
+                        } else {
+                            schedule[day][timeStr] = { activity: 'Clinical Rotation', type: 'rotation' };
+                        }
+                    }
+                    
+                    // Post-rotation time
+                    schedule[day]['4:00 PM'] = { activity: 'Commute back', type: 'buffer' };
+                    schedule[day]['5:00 PM'] = { activity: 'Dinner', type: 'meal' };
+                    
+                    if (callDays.includes(day)) {
+                        // On-call days
+                        schedule[day]['6:00 PM'] = { activity: 'Rest / Light study', type: 'study' };
+                        schedule[day]['7:00 PM'] = { activity: 'Buffer time', type: 'buffer' };
+                        schedule[day]['8:00 PM'] = { activity: 'On-call duty', type: 'on-call' };
+                        schedule[day]['9:00 PM'] = { activity: 'On-call duty', type: 'on-call' };
+                        schedule[day]['10:00 PM'] = { activity: 'On-call duty', type: 'on-call' };
+                    } else {
+                        // Non-call weekdays
+                        schedule[day]['6:00 PM'] = { activity: 'Study session', type: 'study' };
+                        schedule[day]['7:00 PM'] = { activity: 'Study session', type: 'study' };
+                        schedule[day]['8:00 PM'] = { activity: 'Exercise / Fitness', type: 'fitness' };
+                        schedule[day]['9:00 PM'] = { activity: 'Social time', type: 'social' };
+                        schedule[day]['10:00 PM'] = { activity: 'Leisure / Reading', type: 'reading' };
+                    }
+                } else {
+                    // Weekend schedule
+                    if (day === 'Saturday') {
+                        schedule[day]['8:00 AM'] = { activity: 'Extended study', type: 'study' };
+                        schedule[day]['9:00 AM'] = { activity: 'Extended study', type: 'study' };
+                        schedule[day]['10:00 AM'] = { activity: 'Extended study', type: 'study' };
+                        schedule[day]['11:00 AM'] = { activity: 'Break / Snack', type: 'buffer' };
+                        schedule[day]['12:00 PM'] = { activity: 'Lunch', type: 'meal' };
+                        schedule[day]['1:00 PM'] = { activity: 'Exercise / Fitness', type: 'fitness' };
+                        schedule[day]['2:00 PM'] = { activity: 'Social time / Errands', type: 'social' };
+                        schedule[day]['3:00 PM'] = { activity: 'Social time / Errands', type: 'social' };
+                        schedule[day]['4:00 PM'] = { activity: 'Personal time', type: 'leisure' };
+                        schedule[day]['5:00 PM'] = { activity: 'Dinner', type: 'meal' };
+                        schedule[day]['6:00 PM'] = { activity: 'Book reading', type: 'reading' };
+                        schedule[day]['7:00 PM'] = { activity: 'Book reading', type: 'reading' };
+                        schedule[day]['8:00 PM'] = { activity: 'Leisure activities', type: 'leisure' };
+                        schedule[day]['9:00 PM'] = { activity: 'Leisure activities', type: 'leisure' };
+                        schedule[day]['10:00 PM'] = { activity: 'Wind down', type: 'buffer' };
+                    } else { // Sunday
+                        schedule[day]['8:00 AM'] = { activity: 'Study review', type: 'study' };
+                        schedule[day]['9:00 AM'] = { activity: 'Study review', type: 'study' };
+                        schedule[day]['10:00 AM'] = { activity: 'Week planning', type: 'buffer' };
+                        schedule[day]['11:00 AM'] = { activity: 'Exercise', type: 'fitness' };
+                        schedule[day]['12:00 PM'] = { activity: 'Lunch', type: 'meal' };
+                        schedule[day]['1:00 PM'] = { activity: 'Social / Family time', type: 'social' };
+                        schedule[day]['2:00 PM'] = { activity: 'Social / Family time', type: 'social' };
+                        schedule[day]['3:00 PM'] = { activity: 'Social / Family time', type: 'social' };
+                        schedule[day]['4:00 PM'] = { activity: 'Personal projects', type: 'leisure' };
+                        schedule[day]['5:00 PM'] = { activity: 'Dinner', type: 'meal' };
+                        schedule[day]['6:00 PM'] = { activity: 'Light study', type: 'study' };
+                        schedule[day]['7:00 PM'] = { activity: 'Book reading', type: 'reading' };
+                        schedule[day]['8:00 PM'] = { activity: 'Relaxation', type: 'leisure' };
+                        schedule[day]['9:00 PM'] = { activity: 'Week prep', type: 'buffer' };
+                        schedule[day]['10:00 PM'] = { activity: 'Wind down', type: 'buffer' };
+                    }
+                }
+            });
+
+            renderSchedule();
+        }
+
+        function renderSchedule() {
+            const grid = document.getElementById('scheduleGrid');
+            grid.innerHTML = '';
+
+            // Create headers
+            days.forEach(day => {
+                const header = document.createElement('div');
+                header.className = 'day-header';
+                header.textContent = day;
+                grid.appendChild(header);
+            });
+
+            // Create time slots and activities
+            timeSlots.forEach(time => {
+                // Time slot header
+                const timeCell = document.createElement('div');
+                timeCell.className = 'time-slot';
+                timeCell.textContent = time;
+                grid.appendChild(timeCell);
+
+                // Activity cells for each day
+                days.slice(1).forEach(day => {
+                    const cell = document.createElement('div');
+                    cell.className = 'activity-cell';
+                    
+                    const scheduleItem = schedule[day][time];
+                    if (scheduleItem && scheduleItem.activity) {
+                        cell.textContent = scheduleItem.activity;
+                        cell.classList.add(scheduleItem.type);
+                    }
+                    
+                    cell.onclick = () => editCell(day, time, cell);
+                    grid.appendChild(cell);
+                });
+            });
+        }
+
+        function editCell(day, time, cell) {
+            const currentActivity = schedule[day][time].activity;
+            const newActivity = prompt(`Edit activity for ${day} at ${time}:`, currentActivity);
+            
+            if (newActivity !== null) {
+                const activityTypes = {
+                    'clinical': 'rotation',
+                    'rotation': 'rotation',
+                    'on-call': 'on-call',
+                    'call': 'on-call',
+                    'study': 'study',
+                    'exercise': 'fitness',
+                    'fitness': 'fitness',
+                    'gym': 'fitness',
+                    'reading': 'reading',
+                    'book': 'reading',
+                    'social': 'social',
+                    'family': 'social',
+                    'friends': 'social',
+                    'leisure': 'leisure',
+                    'relax': 'leisure',
+                    'buffer': 'buffer',
+                    'break': 'buffer',
+                    'meal': 'meal',
+                    'breakfast': 'meal',
+                    'lunch': 'meal',
+                    'dinner': 'meal',
+                    'sleep': 'sleep'
+                };
+
+                let activityType = 'buffer';
+                for (const [keyword, type] of Object.entries(activityTypes)) {
+                    if (newActivity.toLowerCase().includes(keyword)) {
+                        activityType = type;
+                        break;
+                    }
+                }
+
+                schedule[day][time] = { activity: newActivity, type: activityType };
+                cell.textContent = newActivity;
+                cell.className = 'activity-cell ' + activityType;
+            }
+        }
+
+        function exportSchedule() {
+            let exportText = 'Medical Student Weekly Schedule\n' + '='.repeat(35) + '\n\n';
+            
+            days.slice(1).forEach(day => {
+                exportText += `${day.toUpperCase()}\n${'-'.repeat(day.length)}\n`;
+                timeSlots.forEach(time => {
+                    const activity = schedule[day][time].activity || 'Free time';
+                    exportText += `${time}: ${activity}\n`;
+                });
+                exportText += '\n';
+            });
+
+            const blob = new Blob([exportText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'medical_student_schedule.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize the schedule on page load
+        window.onload = function() {
+            // Set default on-call days
+            const callDaysSelect = document.getElementById('callDays');
+            callDaysSelect.options[2].selected = true; // Wednesday
+            callDaysSelect.options[4].selected = true; // Friday
+            
+            generateSchedule();
+        };
+    </script>
+</body>
+</html>
